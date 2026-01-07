@@ -9,10 +9,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <arpa/inet.h>
 
 typedef unsigned char u8;
 
-int main(void) {
+int main(int argc, char *argv[]) {
 	struct ifreq ifr;
 	struct sockaddr_ll sll = {0};
 	int fd, id;
@@ -59,12 +60,16 @@ int main(void) {
 	memcpy(arpreq, mac, 6);
 	memcpy(arpreq+6, ip4, 4);
 	memset(arpreq+6+4, 0x00, 6);
-	arpreq[6+4+6] = 192;
-	arpreq[6+4+6+1] = 168;
-	arpreq[6+4+6+2] = 0;
-	arpreq[6+4+6+3] = 231;
 
-	puts("Get 192.168.0.231 MAC address");
+	/* запись IP получателя */
+	const char *target_ip4 = argv[1];
+	struct in_addr target_addr;
+	if (inet_pton(AF_INET, target_ip4,  &target_addr) <= 0) return 0;
+	u8 octets[4];
+        memcpy(octets, &(target_addr.s_addr), sizeof(target_addr));
+	for(int i = 0; i < 4; i++) arpreq[6+4+6+i] = octets[i];
+
+	printf("Get %s MAC address\n", target_ip4);
 
 	/* заполнение итогового кадра полученными данными */
 	memcpy(frame, ethernet, sizeof(ethernet));
